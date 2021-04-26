@@ -1,1 +1,1 @@
-This is a file from RStudio
+## The goal of this project is to understand vaccine distriibution accross the US.
