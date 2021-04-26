@@ -22,7 +22,7 @@ import CDC vaccination data:
 
 ```{r}
 
-cdcData <- read_csv("covid19_vaccinations_in_the_united_states.csv", skip = 2) 
+cdcData <- read_csv("data/covid19_vaccinations_in_the_united_states.csv", skip = 2) 
 cdcData <- cdcData %>% rename_with(~ gsub(" ", "_", names(cdcData)))
 cdcData <- cdcData %>% rename_with(~ gsub("/", "_", names(cdcData)))
 cdcData <- cdcData %>% mutate(State_Territory_Federal_Entity = gsub(" State", "", State_Territory_Federal_Entity))
@@ -95,9 +95,7 @@ I'm curious to see how much of a pain it would be to incorporate the time data:
 
 ```{r}
 
-modernaTimeLine <- read_csv("COVID-19_Vaccine_Distribution_Allocations_by_Jurisdiction_-_Moderna.csv")
-plot_ly(filter(modernaTimeLine, Jurisdiction == 'New York'), x = ~`Week of Allocations`, y = ~`1st Dose Allocations`, type='scatter', mode='line') %>%
-  add_trace(filter(modernaTimeLine, Jurisdiction == 'Pennsylvania'), x = ~`Week of Allocations`, y = ~`1st Dose Allocations`, type='scatter', mode='line')
+modernaTimeLine <- read_csv("data/COVID-19_Vaccine_Distribution_Allocations_by_Jurisdiction_-_Moderna.csv")
 
 ```
 
