@@ -1,4 +1,4 @@
-The goal of this project is to understand vaccine distribution accross the US.
+# The goal of this project is to understand vaccine distribution accross the US.
 
 So far, I have worked on tidying the CDC data. 
 
@@ -9,4 +9,4 @@ I ended deciding that we might need to separate the CDC data into separate dataf
 
 See "FinalProjectOrganizedCode.Rmd" for my work so far.
 
-I also did some work on the shiny app UI but I think this will change depending on how we think about the data moving forward.
+I also did some work on the shiny app UI but I think this will change depending on how we think about the data moving forward. See: 'app.R'
