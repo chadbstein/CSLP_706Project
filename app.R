@@ -150,7 +150,7 @@ server <- function(input, output) {
       
       #colnames(tidyCDC[grep(ageKeyword, names(tidyCDC), ignore.case=TRUE)],)
       #colnames(tidyCDC[grep(input$delivery, names(tidyCDC), ignore.case=TRUE)],)
-      colnames(tidyCDC[grep(input$brand, names(tidyCDC), ignore.case=TRUE)],)
+      #colnames(tidyCDC[grep(input$brand, names(tidyCDC), ignore.case=TRUE)],)
     })
 }
 
