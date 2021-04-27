@@ -19,35 +19,10 @@ library(plotly)
 library(ggplot2)
 library(rjson)
 
-###
-# cdcData <- read_csv("data/covid19_vaccinations_in_the_united_states.csv", skip=2) 
-# cdcData <- cdcData %>% rename_with(~ gsub(" ", "_", names(cdcData)))
-# cdcData <- cdcData %>% rename_with(~ gsub("/", "_", names(cdcData)))
-# cdcData <- cdcData %>% mutate(State_Territory_Federal_Entity = gsub(" State", "", State_Territory_Federal_Entity))
-# cdcData <- cdcData %>% 
-#   select(-contains("residence", ignore.case = TRUE)) %>% 
-#   select(-contains("fully", ignore.case=TRUE)) %>% 
-#   select(-contains("unknown", ignore.case=TRUE))
-# 
-# stateIDs <- read_csv("data/us_states_hexgrid.csv") %>% 
-#   select(-the_geom, -cartodb_id, -created_at, -updated_at, -bees) %>%
-#   mutate(google_name = gsub(" \\(United States\\)", "", google_name))
-# 
-# tidyCDC <- left_join(stateIDs, cdcData, by = c("google_name" = "State_Territory_Federal_Entity"))
-# 
-# pfizer <- read_csv("data/COVID-19_Vaccine_Distribution_Allocations_by_Jurisdiction_-_Pfizer.csv")
-# pfizer <- pfizer %>% rename_with(~ gsub(" ", "_", names(pfizer)))
-# moderna <- read_csv("data/COVID-19_Vaccine_Distribution_Allocations_by_Jurisdiction_-_Moderna.csv")
-# moderna <- moderna %>%   rename_with(~ gsub(" ", "_", names(moderna)))
-# johnson <- read_csv("data/COVID-19_Vaccine_Distribution_Allocations_by_Jurisdiction_-_Janssen.csv")
-# johnson <- johnson %>%   rename_with(~ gsub(" ", "_", names(johnson)))
-# 
-# testData <- read.csv("data/testData.csv")
-###
-
 hexes <- "data/us_states_hexgrid.geojson"
 states <- rjson::fromJSON(file=hexes)
 theme <- "www/bootstrap.min.css"
+cdcData_agnosticLong <- read_rds("data/cdcData_agnosticLong.rds")
 
 ui <- fluidPage(
     theme = shinytheme("flatly"),
@@ -60,21 +35,23 @@ ui <- fluidPage(
     # Sidebar
     sidebarLayout(
         sidebarPanel(
-            checkboxGroupInput("brand",
-                        h3("Vaccine Manufacturer:"),
-                        choices= list("Moderna" = 'Moderna',
-                                      "Pfizer/BioNTech" = 'Pfizer',
-                                      "Johnson and Johnson/Janssen" = 'Janssen')),
+          radioButtons("brand",
+                        h3("Select a manufacturer, or look at national trends:"),
+                        choices= list("Moderna only" = 'Moderna',
+                                      "Pfizer/BioNTech only" = 'Pfizer',
+                                      "Johnson and Johnson/Janssen only" = 'Janssen',
+                                      "All vaccines" = 'allBrands')),
             
             radioButtons("delivery",
-                               h3("Status of vaccine"),
-                               choices= list("Delivered" = 'delivered',
-                                             "Administered" = 'administered')),
+                         h3("Status of vaccine"),
+                         choices= list("Delivered" = 'delivered',
+                                       "Administered" = 'administered')),
             
-            checkboxGroupInput("age",
-                               h3("Age"),
-                               choices= list("18-65" = '18',
-                                             "65+" = '65'))         
+            radioButtons("age",
+                         h3("Age"),
+                         choices= list("All age groups" = 'Total',
+                                       "18-65" = '18plus',
+                                       "65+" = '65plus'))         
             
             ),
         
@@ -83,9 +60,10 @@ ui <- fluidPage(
         # Show a plot
         mainPanel(
            plotlyOutput("map"),
-           plotlyOutput("timeline"),
-           verbatimTextOutput("click"),
-           verbatimTextOutput("columns"),
+           #plotlyOutput("timeline"),
+           #verbatimTextOutput("click"),
+           #verbatimTextOutput("columns"),
+           tableOutput("age")
         )
     )
 
@@ -93,10 +71,25 @@ ui <- fluidPage(
 
 
 server <- function(input, output) {
-    
-    output$map <- renderPlotly({
 
+      output$map <- renderPlotly({
+
+      if(input$brand == "allBrands"){
         
+        plotOfChoice <- cdcData_agnosticLong
+        plotOfChoice <- plotOfChoice %>% filter(Group == input$age)
+        
+        if(input$delivery == "delivered"){
+          plotOfChoiceFiltered <- plotOfChoice %>% select(contains("ISO", ignore.case = TRUE) |
+                                                            contains("delivered", ignore.case = TRUE))
+        } else if(input$delivery == "administered"){
+          plotOfChoiceFiltered <- plotOfChoice %>% select(contains("ISO", ignore.case = TRUE) |
+                                                            contains("administered", ignore.case = TRUE))
+        }
+        colnames(plotOfChoiceFiltered) <- c("ISOname", "Stat")
+      }
+      
+      
         g <- list(
             fitbounds = "locations",
             visible = FALSE
@@ -107,51 +100,75 @@ server <- function(input, output) {
         fig <- fig %>% add_trace(
             type="choropleth",
             geojson=states,
-            locations=tidyCDC$iso3166_2,
-            z=tidyCDC$Doses_Delivered_per_100K,
+            locations=plotOfChoiceFiltered$ISOname,
+            z=plotOfChoiceFiltered$Stat,
             colorscale="Blues", reversescale=TRUE,
-            featureidkey="properties.iso3166_2", source = 'source')
+            featureidkey="properties.iso3166_2")
         
         fig <- fig %>% layout(
             geo = g
         )
+        
+        
         fig
+        
     })
     
-    output$timeline <- renderPlotly({
+    #output$timeline <- renderPlotly({
       
       #clickMap <- event_data("plotly_click")
-      d <- event_data("plotly_click")
-      printPlot <- plot_ly(tidyCDC, y= ~d$z, mode='bars', source='source')
+      #d <- event_data("plotly_click")
+      #printPlot <- plot_ly(tidyCDC, y= ~d$z, mode='bars', source='source')
       
       
-    })
+    #})
     
-    output$click <- renderPrint({
-      d <- event_data("plotly_click")
+    # output$click <- renderPrint({
+    #   d <- event_data("plotly_click")
+    #   
+    #   
+    #   #if (is.null(d) == T) return (NULL);
+    #   
+    #   if (is.null(d)) "Click events appear here (double-click to clear)" else d
+    # })
+    # 
+    # output$columns <- renderPrint({
+    # 
+    #   if(is.null(input$age) || is.na(input$age)){
+    #     ageKeyword <- "total"
+    #   } else if(all(c("18", "65") %in% input$age)){
+    #     ageKeyword <- "total"
+    #   } else {
+    #     ageKeyword <- input$age
+    #   }
+    #   
+    # 
+    #   
+    #   #colnames(tidyCDC[grep(ageKeyword, names(tidyCDC), ignore.case=TRUE)],)
+    #   #colnames(tidyCDC[grep(input$delivery, names(tidyCDC), ignore.case=TRUE)],)
+    #   #colnames(tidyCDC[grep(input$brand, names(tidyCDC), ignore.case=TRUE)],)
+    # })
+    # 
+    # output$table <- renderDataTable(plotOfChoiceFiltered)\
       
-      
-      #if (is.null(d) == T) return (NULL);
-      
-      if (is.null(d)) "Click events appear here (double-click to clear)" else d
-    })
-    
-    output$columns <- renderPrint({
+      output$age <- renderTable({
 
-      if(is.null(input$age) || is.na(input$age)){
-        ageKeyword <- "total"
-      } else if(all(c("18", "65") %in% input$age)){
-        ageKeyword <- "total"
-      } else {
-        ageKeyword <- input$age
-      }
+        plotOfChoice <- cdcData_agnosticLong
+        plotOfChoice <- plotOfChoice %>% filter(Group == input$age)
+        
+        if(input$delivery == "delivered"){
+          plotOfChoiceFiltered <- plotOfChoice %>% select(contains("ISO", ignore.case = TRUE) |
+                                                            contains("delivered", ignore.case = TRUE))
+        } else if(input$delivery == "administered"){
+          plotOfChoiceFiltered <- plotOfChoice %>% select(contains("ISO", ignore.case = TRUE) |
+                                                            contains("administered", ignore.case = TRUE))
+        }
+        colnames(plotOfChoiceFiltered) <- c("ISOname", "Stat")
+        plotOfChoiceFiltered
+      })
       
 
       
-      #colnames(tidyCDC[grep(ageKeyword, names(tidyCDC), ignore.case=TRUE)],)
-      #colnames(tidyCDC[grep(input$delivery, names(tidyCDC), ignore.case=TRUE)],)
-      #colnames(tidyCDC[grep(input$brand, names(tidyCDC), ignore.case=TRUE)],)
-    })
 }
 
 

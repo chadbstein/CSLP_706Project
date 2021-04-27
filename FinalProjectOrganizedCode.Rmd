@@ -22,21 +22,31 @@ import CDC vaccination data:
 
 ```{r}
 
-cdcData <- read_csv("data/covid19_vaccinations_in_the_united_states.csv", skip = 2) 
-cdcData <- cdcData %>% rename_with(~ gsub(" ", "_", names(cdcData)))
-cdcData <- cdcData %>% rename_with(~ gsub("/", "_", names(cdcData)))
-cdcData <- cdcData %>% mutate(State_Territory_Federal_Entity = gsub(" State", "", State_Territory_Federal_Entity))
+cdcData_unprocessed <- read_csv("data/covid19_vaccinations_in_the_united_states.csv", skip = 2) 
+cdcData_unprocessed <- cdcData_unprocessed %>% rename_with(~ gsub(" ", "_", names(cdcData_unprocessed)))
+cdcData_unprocessed <- cdcData_unprocessed %>% rename_with(~ gsub("/", "_", names(cdcData_unprocessed)))
+cdcData_unprocessed <- cdcData_unprocessed %>% mutate(State_Territory_Federal_Entity = gsub(" State", "", State_Territory_Federal_Entity))
+
+#I need to merge the hexgrid info with the info above:
+stateInfo <- read_csv("data/us_states_hexgrid.csv") %>% 
+  select(-the_geom, -cartodb_id, -created_at, -updated_at, -bees) %>%
+  mutate(google_name = gsub(" \\(United States\\)", "", google_name))
+
+cdcData <- left_join(stateInfo, cdcData_unprocessed, by = c("google_name" = "State_Territory_Federal_Entity"))
+
 
 
 #I think I need to split the data into two data frames: one where company is a variable, and one where it is not:
 
 cdcData_agnostic <- cdcData %>% 
-  select(contains("federal", ignore.case = TRUE) |
+  select(contains("label", ignore.case = TRUE) |
+           contains("iso", ignore.case = TRUE) |
+           contains("google", ignore.case = TRUE) |
            contains("100k", ignore.case=TRUE)) %>%
   na_if("N/A") %>% 
   drop_na()
 
-colnames(cdcData_agnostic) <- c("State", 
+colnames(cdcData_agnostic) <- c("Shortened", "ISOname", "Name",
                                "Total_DeliveredPer100K", 
                                "18plus_DeliveredPer100K", 
                                "Total_AdministeredPer100K", 
@@ -45,26 +55,29 @@ colnames(cdcData_agnostic) <- c("State",
                                "65plus_DeliveredPer100K")
 
 cdcData_agnostic <- cdcData_agnostic %>%
-  mutate_at(vars("Total_DeliveredPer100K", 
-                 "18plus_DeliveredPer100K", 
-                 "Total_AdministeredPer100K", 
-                 "18plus_AdministeredPer100K", 
-                 "65plus_AdministeredPer100K",
-                "65plus_DeliveredPer100K"), 
+  mutate_at(vars("Shortened", "ISOname", "Name",
+                               "Total_DeliveredPer100K", 
+                               "18plus_DeliveredPer100K", 
+                               "Total_AdministeredPer100K", 
+                               "18plus_AdministeredPer100K", 
+                               "65plus_AdministeredPer100K",
+                               "65plus_DeliveredPer100K"), 
             list(factor))
 
 cdcData_agnosticLong <- cdcData_agnostic %>%
   pivot_longer(
-    !State,
+    !c(Shortened, ISOname, Name),
     names_to= c("Group", ".value"),
     names_sep="_")
 
-cdcData_company <- cdcData %>% select(contains("federal", ignore.case = TRUE) |
+cdcData_company <- cdcData %>% select(contains("label", ignore.case = TRUE) |
+                                        contains("iso", ignore.case = TRUE) |
+                                        contains("google", ignore.case = TRUE) |
                                         contains("moderna", ignore.case=TRUE) | 
                                          contains("pfizer", ignore.case=TRUE) | 
                                          contains("janssen", ignore.case=TRUE))
 
-colnames(cdcData_company) <- c("State", 
+colnames(cdcData_company) <- c("Shortened", "ISOname", "Name",
                                "TotalDelivered_Moderna", 
                                "TotalAdministered_Moderna", 
                                "PeopleFullyVaccinated_Moderna", 
@@ -84,10 +97,11 @@ colnames(cdcData_company) <- c("State",
 
 cdcDataLong <- cdcData_company %>%
   pivot_longer(
-    !State,
+    !c(Shortened, ISOname, Name),
     names_to= c(".value", "manufacturer"),
     names_sep="_")
 
+write_rds(cdcData_agnosticLong, "data/cdcData_agnosticLong.rds")
 
 ```
 
