@@ -154,7 +154,7 @@ server <- function(input, output) {
                                                    mode = 'lines+markers')
         timelineplot <- timelineplot %>% layout(title = "Vaccinations over time",
                               xaxis = list(title = "Week"),
-                              yaxis = list (title = "Percent of people"))
+                              yaxis = list (title = "Percent of people", range = c(0, 100)))
         timelineplot
         
     })
