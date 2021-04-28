@@ -121,12 +121,12 @@ agnosticTimeLine$betterAgeGroup <- ifelse(agnosticTimeLine$`Age Group` == "Ages_
 agnosticTimeLine <- agnosticTimeLine[,-2]
 
 
-agnosticTimeLineGroupedOneDose <- group_by(agnosticTimeLine, Date, betterAgeGroup) %>% summarise(`Percent of age group with at least one dose` = sum(`Percent of age group with at least one dose`))
-agnosticTimeLineGroupedFully <- group_by(agnosticTimeLine, Date, betterAgeGroup) %>% summarise(`Percent of age group fully vaccinated` = sum(`Percent of age group fully vaccinated`))
+agnosticTimeLineGroupedOneDose <- group_by(agnosticTimeLine, Date, betterAgeGroup) %>% summarise(`Percent of age group with at least one dose` = mean(`Percent of age group with at least one dose`))
+agnosticTimeLineGroupedFully <- group_by(agnosticTimeLine, Date, betterAgeGroup) %>% summarise(`Percent of age group fully vaccinated` = mean(`Percent of age group fully vaccinated`))
 agnosticTimeLineGroupedAll <- left_join(agnosticTimeLineGroupedOneDose, agnosticTimeLineGroupedFully)
 
-agnosticTimeLineGroupedOneDose_Total <- group_by(agnosticTimeLineGroupedOneDose, Date) %>% summarise(`Percent of age group with at least one dose` = sum(`Percent of age group with at least one dose`))
-agnosticTimeLineGroupedFully_Total <- group_by(agnosticTimeLineGroupedFully, Date) %>% summarise(`Percent of age group fully vaccinated` = sum(`Percent of age group fully vaccinated`))
+agnosticTimeLineGroupedOneDose_Total <- group_by(agnosticTimeLineGroupedOneDose, Date) %>% summarise(`Percent of age group with at least one dose` = mean(`Percent of age group with at least one dose`))
+agnosticTimeLineGroupedFully_Total <- group_by(agnosticTimeLineGroupedFully, Date) %>% summarise(`Percent of age group fully vaccinated` = mean(`Percent of age group fully vaccinated`))
 agnosticTimeLineGroupedAll_Total <- left_join(agnosticTimeLineGroupedOneDose_Total, agnosticTimeLineGroupedFully_Total)
 
 write_rds(agnosticTimeLineGroupedAll, "data/agnosticTimeLineGroupedAll.rds")
