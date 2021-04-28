@@ -109,7 +109,28 @@ I'm curious to see how much of a pain it would be to incorporate the time data:
 
 ```{r}
 
-modernaTimeLine <- read_csv("data/COVID-19_Vaccine_Distribution_Allocations_by_Jurisdiction_-_Moderna.csv")
+agnosticTimeLine <- read_csv("data/706_Temporal_Data.csv", skip=5)[,c(1,2,5,6)]
+agnosticTimeLine <- agnosticTimeLine %>% filter(!str_detect(`Age Group`, "unknown"))
+agnosticTimeLine <- agnosticTimeLine %>% filter(!str_detect(`Age Group`, "Ages_<18yrs"))
+agnosticTimeLine <- agnosticTimeLine %>% filter(!str_detect(`Age Group`, "Age_known"))
+
+agnosticTimeLine$Date <- lubridate::mdy(agnosticTimeLine$Date)
+
+agnosticTimeLine$betterAgeGroup <- ifelse(agnosticTimeLine$`Age Group` == "Ages_75+_yrs" | agnosticTimeLine$`Age Group` == "Ages_65-74_yrs",
+"65plus", "18plus") 
+agnosticTimeLine <- agnosticTimeLine[,-2]
+
+
+agnosticTimeLineGroupedOneDose <- group_by(agnosticTimeLine, Date, betterAgeGroup) %>% summarise(`Percent of age group with at least one dose` = sum(`Percent of age group with at least one dose`))
+agnosticTimeLineGroupedFully <- group_by(agnosticTimeLine, Date, betterAgeGroup) %>% summarise(`Percent of age group fully vaccinated` = sum(`Percent of age group fully vaccinated`))
+agnosticTimeLineGroupedAll <- left_join(agnosticTimeLineGroupedOneDose, agnosticTimeLineGroupedFully)
+
+agnosticTimeLineGroupedOneDose_Total <- group_by(agnosticTimeLineGroupedOneDose, Date) %>% summarise(`Percent of age group with at least one dose` = sum(`Percent of age group with at least one dose`))
+agnosticTimeLineGroupedFully_Total <- group_by(agnosticTimeLineGroupedFully, Date) %>% summarise(`Percent of age group fully vaccinated` = sum(`Percent of age group fully vaccinated`))
+agnosticTimeLineGroupedAll_Total <- left_join(agnosticTimeLineGroupedOneDose_Total, agnosticTimeLineGroupedFully_Total)
+
+write_rds(agnosticTimeLineGroupedAll, "data/agnosticTimeLineGroupedAll.rds")
+write_rds(agnosticTimeLineGroupedAll_Total, "data/agnosticTimeLineGroupedAll_Total.rds")
 
 ```
 
