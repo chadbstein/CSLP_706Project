@@ -134,3 +134,34 @@ write_rds(agnosticTimeLineGroupedAll_Total, "data/agnosticTimeLineGroupedAll_Tot
 
 ```
 
+I've done a bunch of work on the manufacturer-independent side, but now I want to work on the side that does analysis by manufacturer:
+
+```{r}
+
+pfizerTimelineDownload <- download.file("https://data.cdc.gov/resource/saz5-9hgg.csv", "data/updatedPfizer.csv")
+modernaTimelineDownload <- download.file("https://data.cdc.gov/resource/b7pe-5nws.csv", "data/updatedModerna.csv")
+johnsonTimelineDownload <- download.file("https://data.cdc.gov/resource/w9zu-fywh.csv", "data/updatedJohnson.csv")
+
+pfizerTimeline <- read_csv("data/updatedPfizer.csv")
+modernaTimeline <- read_csv("data/updatedModerna.csv")
+johnsonTimeline <- read_csv("data/updatedJohnson.csv")
+
+colnames(pfizerTimeline) <- c("State", "Week", "FirstDoseAllocation", "SecondDoseAllocation")
+colnames(modernaTimeline) <- c("State", "Week", "FirstDoseAllocation", "SecondDoseAllocation")
+colnames(johnsonTimeline) <- c("State", "Week", "FirstDoseAllocation")
+
+pfizerTimeline$Week <- lubridate::ymd(pfizerTimeline$Week)
+modernaTimeline$Week <- lubridate::ymd(modernaTimeline$Week)
+johnsonTimeline$Week <- lubridate::ymd(johnsonTimeline$Week)
+
+pfizerTimeline <- pfizerTimeline %>% group_by(State)
+modernaTimeline <- modernaTimeline %>% group_by(State)
+johnsonTimeline <- johnsonTimeline %>% group_by(State)
+
+pfizerTimeline <- left_join(stateInfo, pfizerTimeline, by = c("google_name" = "State"))
+modernaTimeline <- left_join(stateInfo, modernaTimeline, by = c("google_name" = "State"))
+johnsonTimeline <- left_join(stateInfo, johnsonTimeline, by = c("google_name" = "State"))
+
+#plot_ly(modernaTimeline, x=~Week, y=~FirstDoseAllocation, mode = 'lines+markers')
+```
+
