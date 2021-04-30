@@ -56,17 +56,19 @@ ui <- navbarPage("COVID-19 Vaccination Dashboard",
                      
                      sliderInput("Population",
                                  "Filter by states with selected population:",
-                                  min = min(pfizerTimeline$PopulationEstimate),
+                                  min = 400000,
                                   max = max(pfizerTimeline$PopulationEstimate),
-                                  value=c(min(pfizerTimeline$PopulationEstimate), max(pfizerTimeline$PopulationEstimate))),
+                                  value=c(400000, max(pfizerTimeline$PopulationEstimate)),
+                                  step=250000),
                      
                  
                     sliderInput("Spending",
                                 "Filter by states with selected public health spending per capita:",
-                                min = min(pfizerTimeline$HealthSpendingPerCapita),
+                                min = 5000,
                                 max = max(pfizerTimeline$HealthSpendingPerCapita),
                                 pre = "$", sep = ",",
-                                value=c(min(pfizerTimeline$HealthSpendingPerCapita), max(pfizerTimeline$HealthSpendingPerCapita)))),
+                                value=c(5000, max(pfizerTimeline$HealthSpendingPerCapita)),
+                                step=100),),
                  
            
                  
@@ -314,21 +316,39 @@ server <- function(input, output, session) {
             #summarise(`TotalDoseAllocationPer100k` = sum(`TotalDoseAllocationPer100k`))
         
         
-        barPlot <- plot_ly(filteredData, x=~Week, y=~TotalDoseAllocationPer100k, type='bar', color = ~iso3166_2, colors="red") %>% 
-            layout(barmode='stack', xaxis = list(range = c(input$Dates[1], input$Dates[2]))) %>% hide_legend()
+        barPlot <- plot_ly(filteredData, 
+                           x=~Week, y=~TotalDoseAllocationPer100k, 
+                           type='bar', color = ~iso3166_2, colors="red", 
+                           source="barPlot") %>% 
+            layout(barmode='stack', xaxis = list(range = c(input$Dates[1], input$Dates[2]))) %>% hide_legend() %>%
+            event_register('plotly_relayout')
         barPlot
         
     })
     
     output$instructions <- renderPrint({
-        #d <- event_data("plotly_click")e
         
-        #if (is.null(d) == T) return (NULL);
-        currentView <- event_data(event="plotly_relayout", source="vaccineTimelinePlot")
-        if (is.null(currentView) == T) return (NULL) else gsub( " .*$", "", currentView$`xaxis.range[0]`)
-        #newMin <- currentView$`xaxis.range[0]`
-        #newMax <- currentView$`xaxis.range[2]`
-        #if (is.null(d)) "Click events appear here (double-click to clear)" else d
+        if(input$brand == "Moderna"){
+            vaccineDF <- modernaTimeline
+        } else if(input$brand == "Pfizer"){
+            vaccineDF <- pfizerTimeline
+        } else if(input$brand == "Johnson"){
+            vaccineDF <- johnsonTimeline
+        }
+        
+        vaccineDF <- vaccineDF %>% 
+            filter(PopulationEstimate >= input$Population[1]) %>%
+            filter(PopulationEstimate <= input$Population[2]) %>%
+            filter(HealthSpendingPerCapita >= input$Spending[1]) %>%
+            filter(HealthSpendingPerCapita <= input$Spending[2])
+        
+        activeStates <- unique(vaccineDF[c("iso3166_2")])
+        activeStates <- activeStates[order(activeStates$iso3166_2),]
+        d <- event_data("plotly_click")
+        
+
+        if (is.null(d)) "Click events appear here (double-click to clear)" else activeStates
+        
     })
     
     
@@ -352,7 +372,25 @@ server <- function(input, output, session) {
                           
     })
     
-
+    observe({
+        
+        currentView2 <- event_data(event="plotly_relayout", source="barPlot")
+        
+        if(is.null(currentView2) || is.na(currentView2) || identical(currentView2, character(0))){
+            newMin <- oldestDate
+            newMax <- mostRecentDate
+        }
+        
+        newMin <- gsub( " .*$", "", currentView2$`xaxis.range[0]`)
+        newMax <- gsub( " .*$", "", currentView2$`xaxis.range[1]`)
+        
+        updateSliderInput(session, 'Dates', 
+                          min = as.Date(oldestDate,"%Y-%m-%d"),
+                          max = as.Date(mostRecentDate,"%Y-%m-%d"),
+                          value = c(as.Date(newMin,"%Y-%m-%d"), as.Date(newMax,"%Y-%m-%d")), timeFormat="%Y-%m-%d")
+        
+        
+    })
     
 }
 
