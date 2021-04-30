@@ -28,9 +28,13 @@ cdcData_unprocessed <- cdcData_unprocessed %>% rename_with(~ gsub("/", "_", name
 cdcData_unprocessed <- cdcData_unprocessed %>% mutate(State_Territory_Federal_Entity = gsub(" State", "", State_Territory_Federal_Entity))
 
 #I need to merge the hexgrid info with the info above:
+
 stateInfo <- read_csv("data/us_states_hexgrid.csv") %>% 
   select(-the_geom, -cartodb_id, -created_at, -updated_at, -bees) %>%
   mutate(google_name = gsub(" \\(United States\\)", "", google_name))
+
+demoData <- read_csv("data/healthCareExpendituresperCapita.csv")
+demoDataJoined <- left_join(stateInfo, demoData, by = c("google_name" = "Location"))
 
 cdcData <- left_join(stateInfo, cdcData_unprocessed, by = c("google_name" = "State_Territory_Federal_Entity"))
 
@@ -148,7 +152,10 @@ johnsonTimeline <- read_csv("data/updatedJohnson.csv")
 
 colnames(pfizerTimeline) <- c("State", "Week", "FirstDoseAllocation", "SecondDoseAllocation")
 colnames(modernaTimeline) <- c("State", "Week", "FirstDoseAllocation", "SecondDoseAllocation")
-colnames(johnsonTimeline) <- c("State", "Week", "FirstDoseAllocation")
+colnames(johnsonTimeline) <- c("State", "Week", "TotalDoseAllocation")
+
+pfizerTimeline <- pfizerTimeline %>% mutate(TotalDoseAllocation = FirstDoseAllocation + SecondDoseAllocation)
+modernaTimeline <- modernaTimeline %>% mutate(TotalDoseAllocation = FirstDoseAllocation + SecondDoseAllocation)
 
 pfizerTimeline$Week <- lubridate::ymd(pfizerTimeline$Week)
 modernaTimeline$Week <- lubridate::ymd(modernaTimeline$Week)
@@ -158,9 +165,18 @@ pfizerTimeline <- pfizerTimeline %>% group_by(State)
 modernaTimeline <- modernaTimeline %>% group_by(State)
 johnsonTimeline <- johnsonTimeline %>% group_by(State)
 
-pfizerTimeline <- left_join(stateInfo, pfizerTimeline, by = c("google_name" = "State"))
-modernaTimeline <- left_join(stateInfo, modernaTimeline, by = c("google_name" = "State"))
-johnsonTimeline <- left_join(stateInfo, johnsonTimeline, by = c("google_name" = "State"))
+pfizerTimeline <- left_join(demoDataJoined, pfizerTimeline, by = c("google_name" = "State"))
+modernaTimeline <- left_join(demoDataJoined, modernaTimeline, by = c("google_name" = "State"))
+johnsonTimeline <- left_join(demoDataJoined, johnsonTimeline, by = c("google_name" = "State"))
+
+pfizerTimeline <- pfizerTimeline %>% mutate(TotalDoseAllocationPer100k = TotalDoseAllocation/(PopulationEstimate/100000))
+modernaTimeline <- modernaTimeline %>% mutate(TotalDoseAllocationPer100k = TotalDoseAllocation/(PopulationEstimate/100000))
+johnsonTimeline <- johnsonTimeline %>% mutate(TotalDoseAllocationPer100k = TotalDoseAllocation/(PopulationEstimate/100000))
+
+write_rds(pfizerTimeline, "data/pfizerTimeline.rds")
+write_rds(modernaTimeline, "data/modernaTimeline")
+write_rds(johnsonTimeline, "data/johnsonTimeline")
+
 
 #plot_ly(modernaTimeline, x=~Week, y=~FirstDoseAllocation, mode = 'lines+markers')
 ```
