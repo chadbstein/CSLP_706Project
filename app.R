@@ -298,10 +298,9 @@ server <- function(input, output, session) {
                                 event_register('plotly_relayout')
         
         vaccineTimelinePlot <- vaccineTimelinePlot %>% highlight_key() %>% 
-                                   add_trace(x=~Week, y=~TotalDoseAllocationPer100k, 
-                                   hovertemplate = "Doses allocated per 100K people: <br>%{y}", 
-                                   mode = 'lines+markers',
-                                   hoverinfo = ~iso3166_2) %>% layout(
+                                   add_trace(x=~Week, y=~TotalDoseAllocationPer100k, text=~iso3166_2,
+                                   hoverinfo='text', 
+                                   mode = 'lines+markers') %>% layout(
                                        xaxis = list(range = c(input$Dates[1], input$Dates[2])))
             
         vaccineTimelinePlot
