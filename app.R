@@ -52,7 +52,7 @@ ui <- navbarPage("COVID-19 Vaccination Dashboard",
                                  min = as.Date(oldestDate,"%Y-%m-%d"),
                                  max = as.Date(mostRecentDate,"%Y-%m-%d"),
                                  value=c(as.Date(oldestDate,"%Y-%m-%d"), as.Date(mostRecentDate,"%Y-%m-%d")),
-                                 timeFormat="%Y-%m-%d"),
+                                 timeFormat="%Y-%m-%d", step=7),
                      
                      sliderInput("Population",
                                  "Filter by states with selected population:",
@@ -220,11 +220,29 @@ server <- function(input, output, session) {
             locations=filteredData$iso3166_2,
             z=filteredData$TotalDoseAllocationPer100k,
             colorscale="Blues", reversescale=TRUE,
-            featureidkey="properties.iso3166_2")
+            featureidkey="properties.iso3166_2") %>%
+            colorbar(title = "Vaccines per 100K")
+        
         
         fig2 <- fig2 %>% layout(
             geo = g,
             title = "Vaccinations by state")
+        
+        fig2 <- fig2 %>% add_trace(type="scattergeo",
+                                   locations = filteredData$iso3166_2, 
+                                   mode="text",geojson=states,
+                                   featureidkey="properties.iso3166_2",
+                                   texttemplate=filteredData$iso3166_2,
+                                   #text = states,
+                                   textfont = list(color=rgb(0,0,0),  size =12))
+        
+        fig2 <- fig2 %>% add_trace(
+            type="choropleth",
+            geojson=states,
+            locations=filteredData$iso3166_2,
+            z=filteredData$TotalDoseAllocationPer100k,
+            colorscale="Blues", reversescale=TRUE,
+            featureidkey="properties.iso3166_2", hovertemplate = 'Doses allocated per 100K people:<br>%{z}', showscale = FALSE)
         
         fig2
         
@@ -281,13 +299,12 @@ server <- function(input, output, session) {
         
         vaccineTimelinePlot <- vaccineTimelinePlot %>% highlight_key() %>% 
                                    add_trace(x=~Week, y=~TotalDoseAllocationPer100k, 
-                                   name = 'Doses allocated per 100K people', 
-                                   mode = 'lines',
-                                   hovertemplate = ~iso3166_2) %>% layout(
+                                   hovertemplate = "Doses allocated per 100K people: <br>%{y}", 
+                                   mode = 'lines+markers',
+                                   hoverinfo = ~iso3166_2) %>% layout(
                                        xaxis = list(range = c(input$Dates[1], input$Dates[2])))
             
         vaccineTimelinePlot
-        
         
     })
     
@@ -325,32 +342,6 @@ server <- function(input, output, session) {
         barPlot
         
     })
-    
-    output$instructions <- renderPrint({
-        
-        if(input$brand == "Moderna"){
-            vaccineDF <- modernaTimeline
-        } else if(input$brand == "Pfizer"){
-            vaccineDF <- pfizerTimeline
-        } else if(input$brand == "Johnson"){
-            vaccineDF <- johnsonTimeline
-        }
-        
-        vaccineDF <- vaccineDF %>% 
-            filter(PopulationEstimate >= input$Population[1]) %>%
-            filter(PopulationEstimate <= input$Population[2]) %>%
-            filter(HealthSpendingPerCapita >= input$Spending[1]) %>%
-            filter(HealthSpendingPerCapita <= input$Spending[2])
-        
-        activeStates <- unique(vaccineDF[c("iso3166_2")])
-        activeStates <- activeStates[order(activeStates$iso3166_2),]
-        d <- event_data("plotly_click")
-        
-
-        if (is.null(d)) "Click events appear here (double-click to clear)" else activeStates
-        
-    })
-    
     
     observe({
         
@@ -391,6 +382,31 @@ server <- function(input, output, session) {
         
         
     })
+    
+    # output$instructions <- renderPrint({
+    #     
+    #     if(input$brand == "Moderna"){
+    #         vaccineDF <- modernaTimeline
+    #     } else if(input$brand == "Pfizer"){
+    #         vaccineDF <- pfizerTimeline
+    #     } else if(input$brand == "Johnson"){
+    #         vaccineDF <- johnsonTimeline
+    #     }
+    #     
+    #     vaccineDF <- vaccineDF %>% 
+    #         filter(PopulationEstimate >= input$Population[1]) %>%
+    #         filter(PopulationEstimate <= input$Population[2]) %>%
+    #         filter(HealthSpendingPerCapita >= input$Spending[1]) %>%
+    #         filter(HealthSpendingPerCapita <= input$Spending[2])
+    #     
+    #     activeStates <- unique(vaccineDF[c("iso3166_2")])
+    #     activeStates <- activeStates[order(activeStates$iso3166_2),]
+    #     d <- event_data("plotly_click")
+    #     
+    #     
+    #     if (is.null(d)) "Click events appear here (double-click to clear)" else activeStates
+    #     
+    # })
     
 }
 
