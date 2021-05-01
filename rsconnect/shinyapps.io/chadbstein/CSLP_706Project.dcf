@@ -5,9 +5,9 @@ account: chadbstein
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 4042594
-bundleId: 4543464
+bundleId: 4543576
 url: https://chadbstein.shinyapps.io/CSLP_706Project/
-when: 1619873047.60936
-lastSyncTime: 1619873047.60938
+when: 1619876116.0638
+lastSyncTime: 1619876116.06381
 asMultiple: FALSE
 asStatic: FALSE

@@ -32,9 +32,12 @@ ui <- navbarPage("COVID-19 Vaccination Dashboard",
              fluidRow(
                  column(8,
                         h2(p("About this project:")),
-                        h6(p("This project aggregates data from the Centers for Disease Control and Prevention (CDC) about the ongoing COVID-19 pandemic.")), 
-                        h6(p("It was designed and executed by Chad Stein and Lily Payvandi as part of the BMI 706 final project for Spring 2021.")),
-                        h6(p("Weekly vaccination data updates automatically."))))),
+                        h5(p("This project aggregates data from the Centers for Disease Control and Prevention (CDC) about the ongoing COVID-19 pandemic.")), 
+                        h5(p("It was designed and executed by Chad Stein and Lily Payvandi as part of the BMI 706 final project for Spring 2021.")),
+                        br(),
+                        h5(p("Explore the distribution of different vaccines over time on the 'Trends by Manufacturer' tab.")),
+                        h5(p("Explore how the vaccines have been used across the country in the 'Cross-manufacturer trends' tab."))
+                        ))),
                      
 
     tabPanel("Trends by Manufacturer",
@@ -76,8 +79,11 @@ ui <- navbarPage("COVID-19 Vaccination Dashboard",
                  mainPanel(
                      plotlyOutput("vaccineMap"),
                      verbatimTextOutput("instructions"),
+                     br(),
                      plotlyOutput("vaccineTimeline"),
-                     plotlyOutput("stateRanks")
+                     br(),
+                     br(),
+                     plotlyOutput("stackedBar")
                      
                  )
              )),
@@ -141,14 +147,33 @@ server <- function(input, output, session) {
             locations=plotOfChoiceFiltered$ISOname,
             z=plotOfChoiceFiltered$Stat,
             colorscale="Blues", reversescale=TRUE,
-            featureidkey="properties.iso3166_2")
+            featureidkey="properties.iso3166_2") %>%
+            colorbar(title = 'Allocation per 100K')
+        
         
         fig <- fig %>% layout(
             geo = g,
-            title = "Vaccinations by state"
-        )
+            title = "Vaccinations by state")
+        
+        fig <- fig %>% add_trace(type="scattergeo",
+                                   locations = plotOfChoiceFiltered$ISOname, 
+                                   mode="text",geojson=states,
+                                   featureidkey="properties.iso3166_2",
+                                   texttemplate=plotOfChoiceFiltered$ISOname,
+                                   #text = states,
+                                   textfont = list(color=rgb(0,0,0),  size =12))
+        
+        fig <- fig %>% add_trace(
+            type="choropleth",
+            geojson=states,
+            locations=plotOfChoiceFiltered$ISOname,
+            z=plotOfChoiceFiltered$Stat,
+            colorscale="Blues", reversescale=TRUE,
+            featureidkey="properties.iso3166_2", hovertemplate = 'Doses allocated per 100K people:<br>%{z}', showscale = FALSE)
         
         fig <- fig %>% colorbar(title = 'Vaccinations per 100K')
+        
+        
         
         
         fig
@@ -174,8 +199,8 @@ server <- function(input, output, session) {
         timelineplot <- timelineplot %>% add_trace(y = ~`Percent of age group fully vaccinated`, 
                                                    name = '`Fully Vaccinated', 
                                                    mode = 'lines+markers')
-        timelineplot <- timelineplot %>% layout(title = "Vaccinations over time",
-                              xaxis = list(title = "Week"),
+        timelineplot <- timelineplot %>% layout(title = "Cumulative accinations over time",
+                              xaxis = list(title = "Date"),
                               yaxis = list (title = "Percent of people", range = c(0, 100)))
         timelineplot
         
@@ -300,8 +325,10 @@ server <- function(input, output, session) {
         vaccineTimelinePlot <- vaccineTimelinePlot %>% highlight_key() %>% 
                                    add_trace(data=filteredDataTimeLine, x=~Week, y=~TotalDoseAllocationPer100k, text=~iso3166_2,
                                    hoverinfo='text', 
-                                   mode = 'lines+markers', color=I('darkgray')) %>% layout(
-                                       xaxis = list(range = c(input$Dates[1], input$Dates[2]))) %>% hide_legend()
+                                   mode = 'lines+markers', color=I('darkgray')) %>% 
+                                    layout(xaxis = list(range = c(input$Dates[1], input$Dates[2]), title='Date'),
+                                           yaxis = list(title='Doses allocated per 100K'),
+                                           title='Vaccinations allocated per state') %>% hide_legend()
         
         d <- event_data("plotly_click")
         if(!is.null(d)){
@@ -311,17 +338,21 @@ server <- function(input, output, session) {
         selectedStateNumber <- d$pointNumber
         selectedStateInfo <- filteredDataTimeLine %>% filter(iso3166_2 == activeStates[selectedStateNumber+1,1])
         
-        vaccineTimelinePlot <- vaccineTimelinePlot %>% add_trace(data= selectedStateInfo, x=~Week, y=~TotalDoseAllocationPer100k, text=~iso3166_2,
+        vaccineTimelinePlot <- vaccineTimelinePlot %>% add_trace(data= selectedStateInfo, x=~Week, y=~TotalDoseAllocationPer100k, 
+                                                                 text=~iso3166_2,
                                                                  hoverinfo='text', 
-                                                                 mode = 'lines+markers', color=I('red')) %>% layout(
-                                                                     xaxis = list(range = c(input$Dates[1], input$Dates[2]))) %>% hide_legend()
+                                                                 mode = 'lines+markers', color=I('red')) %>% 
+                                                        layout(xaxis = list(range = c(input$Dates[1], input$Dates[2]), title='Date'),
+                                                               yaxis = list(title='Doses allocated per 100K'),
+                                                               title='Vaccinations allocated per state') %>% 
+                                                        hide_legend()
         }
         
         vaccineTimelinePlot
         
     })
     
-    output$stateRanks <- renderPlotly({
+    output$stackedBar <- renderPlotly({
         
         clickedState <- event_data("plotly_click")
         
@@ -345,11 +376,16 @@ server <- function(input, output, session) {
 
         barPlot <- plot_ly(filteredData, 
                            x=~Week, y=~TotalDoseAllocationPer100k, 
-                           type='bar', color = ~iso3166_2, colors="red", 
+                           type='bar', color = ~iso3166_2, colors="darkgrey", 
                            source="barPlot", marker = list(line = list(width = 0.5,
                                                                        color = 'rgb(0, 0, 0)'))) %>% 
-            layout(barmode='stack', xaxis = list(range = c(input$Dates[1], input$Dates[2]))) %>% hide_legend() %>%
+            layout(barmode = 'stack',
+                   title = 'Vaccinations across states',
+                   xaxis = list(range = c(input$Dates[1], input$Dates[2]), title = 'Date'), 
+                   yaxis = list(title = 'Doses allocated per 100K')) %>% 
+            hide_legend() %>%
             event_register('plotly_relayout')
+        
         barPlot
         
     })
@@ -395,7 +431,7 @@ server <- function(input, output, session) {
     })
     
     output$instructions <- renderPrint({
-
+        
         if(input$brand == "Moderna"){
             vaccineDF <- modernaTimeline
         } else if(input$brand == "Pfizer"){
@@ -416,7 +452,7 @@ server <- function(input, output, session) {
         selectedState <- d$pointNumber
 
         if(is.null(d)){
-        "Click on a state to highlight it below. Double-click to clear."
+        "Click  a state on the map to highlight it below. Double-click to reset."
         } else {
         paste("Currently highlighted state: ", activeStates[selectedState+1,])
         }
