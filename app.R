@@ -169,7 +169,7 @@ server <- function(input, output, session) {
             locations=plotOfChoiceFiltered$ISOname,
             z=plotOfChoiceFiltered$Stat,
             colorscale="Blues", reversescale=TRUE,
-            featureidkey="properties.iso3166_2", hovertemplate = 'Doses allocated per 100K people:<br>%{z}', showscale = FALSE)
+            featureidkey="properties.iso3166_2", hovertemplate = paste('Doses', input$delivery, 'per 100K people:<br>%{z}'), showscale = FALSE)
         
         fig <- fig %>% colorbar(title = 'Vaccinations per 100K')
         
@@ -251,7 +251,7 @@ server <- function(input, output, session) {
         
         fig2 <- fig2 %>% layout(
             geo = g,
-            title = "Vaccinations by state")
+            title = "Vaccinations allocated by state")
         
         fig2 <- fig2 %>% add_trace(type="scattergeo",
                                    locations = filteredData$iso3166_2, 
@@ -291,7 +291,7 @@ server <- function(input, output, session) {
         timelineplot <- timelineplot %>% add_trace(y = ~`Percent of age group fully vaccinated`, 
                                                    name = '`Fully Vaccinated', 
                                                    mode = 'lines+markers')
-        timelineplot <- timelineplot %>% layout(title = "Vaccinations over time",
+        timelineplot <- timelineplot %>% layout(title = "Vaccinations administered over time",
                                                 xaxis = list(title = "Week"),
                                                 yaxis = list (title = "Percent of people", range = c(0, 100)))
         timelineplot
