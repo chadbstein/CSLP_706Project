@@ -1,12 +1,8 @@
 # The goal of this project is to understand vaccine distribution accross the US.
 
-So far, I have worked on tidying the CDC data. 
+To see the finalized app: https://chadbstein.shinyapps.io/CSLP_706Project/
 
-This has included removing columns that either don't make sense or aren't important for us.
-I ended deciding that we might need to separate the CDC data into separate dataframes:
-1)one that contains the manufacturer information
-2)one that contains general delivery/administration information
+Data was originally pre-procesed using a separate R file (FinalProjectCode.R) and fed into the app.R file.
 
-See "FinalProjectOrganizedCode.Rmd" for my work so far.
+For the final submission, data processing and app implementation were combined into FinalProjectOrganizedCode.Rmd.
 
-I also did some work on the shiny app UI but I think this will change depending on how we think about the data moving forward. See: 'app.R'
